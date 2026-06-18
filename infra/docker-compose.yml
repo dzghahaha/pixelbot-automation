@@ -29,14 +29,14 @@ services:
     depends_on:
       mihomo:
         condition: service_started
-    cpus: "6.0"
-    mem_limit: 4g
-    memswap_limit: 4g
+    cpus: "3.0"
+    mem_limit: 2.5g
+    memswap_limit: 2.5g
     deploy:
       resources:
         limits:
-          cpus: "6.0"
-          memory: 4G
+          cpus: "3.0"
+          memory: 2.5G
     volumes:
       - redroid-data:/data
       - /dev/binderfs:/dev/binderfs
