@@ -20,9 +20,9 @@ services:
       - ./mihomo:/root/.config/mihomo
     restart: always
 
-  # ── ReDroid — Headless Android 13 (Pixel 10 Pro XL / franklin) ──────────
+  # ── ReDroid — Headless Android ──
   redroid:
-    image: redroid/redroid:13.0.0-latest
+    image: ${REDROID_IMAGE:-redroid/redroid:11.0.0-latest}
     container_name: pixel10-android
     privileged: true
     network_mode: "container:mihomo"  # Shares network namespace with Mihomo
