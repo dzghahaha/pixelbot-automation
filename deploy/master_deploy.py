@@ -736,8 +736,8 @@ class MasterDeployer:
                 yaml.safe_dump(data, f, allow_unicode=True)
 
             UI.ok("Mihomo config.yaml generated locally")
-            self.conn.upload_file(str(config_path), f"{remote}/infra/mihomo/config.yaml")
-            UI.ok("Mihomo config.yaml uploaded to VPS")
+            self.conn.upload_dir(str(mihomo_local_dir), f"{remote}/infra/mihomo")
+            UI.ok("Mihomo directory uploaded to VPS")
         except Exception as exc:
             UI.error(f"Failed to fetch or generate Mihomo config: {exc}")
 

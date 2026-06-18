@@ -68,5 +68,10 @@ infra/data/android/
 
 # Local cache & scripts
 download_and_upload.py
+download_mihomo_db.py
 infra/downloads_cache/
+infra/mihomo/*.mmdb
+infra/mihomo/*.metadb
+infra/mihomo/*.dat
+
 
