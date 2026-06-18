@@ -613,6 +613,11 @@ class MasterDeployer:
             f" {remote}/magisk_module {remote}/bot {remote}/screenshots {remote}/logs",
             sudo=True,
         )
+        if self.config.vps_user != "root":
+            self.conn.exec(
+                f"chown -R {self.config.vps_user}:{self.config.vps_user} {remote}",
+                sudo=True,
+            )
 
         # ── Upload infra files ──
         upload_map = {
