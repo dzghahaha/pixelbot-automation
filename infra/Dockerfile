@@ -17,7 +17,7 @@ WORKDIR /app
 
 # Install Python dependencies
 COPY infra/requirements-android.txt .
-RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ -r requirements-android.txt
+RUN pip install --default-timeout=1000 --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements-android.txt
 
 # ── Copy all required code ──────────────────────────────────────
 # Build context is the project root (set in docker-compose.yml)
