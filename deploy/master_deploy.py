@@ -610,7 +610,7 @@ class MasterDeployer:
         UI.step("Creating remote directory structure...")
         self.conn.exec(
             f"mkdir -p {remote}/infra/scripts {remote}/infra/identity {remote}/infra/wireguard {remote}/infra/.module_cache"
-            f" {remote}/magisk_module {remote}/bot {remote}/screenshots {remote}/logs",
+            f" {remote}/infra/mihomo {remote}/magisk_module {remote}/bot {remote}/screenshots {remote}/logs",
             sudo=True,
         )
         if self.config.vps_user != "root":
@@ -621,6 +621,8 @@ class MasterDeployer:
 
         # ── Upload infra files ──
         upload_map = {
+            # Project environment secrets
+            str(self.project_root / "api.env"): f"{remote}/api.env",
             # Infra root files
             str(infra / "docker-compose.yml"): f"{remote}/infra/docker-compose.yml",
             str(infra / "Dockerfile"): f"{remote}/infra/Dockerfile",
@@ -682,7 +684,6 @@ class MasterDeployer:
 
         # ── Setup and Upload Mihomo Config ──
         UI.step("Setting up Mihomo config...")
-        self.conn.exec(f"mkdir -p {remote}/infra/mihomo", sudo=True)
         mihomo_local_dir = self.project_root / "infra" / "mihomo"
         mihomo_local_dir.mkdir(parents=True, exist_ok=True)
         config_path = mihomo_local_dir / "config.yaml"
