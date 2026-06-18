@@ -610,7 +610,7 @@ class MasterDeployer:
         UI.step("Creating remote directory structure...")
         self.conn.exec(
             f"mkdir -p {remote}/infra/scripts {remote}/infra/identity {remote}/infra/wireguard {remote}/infra/.module_cache"
-            f" {remote}/infra/mihomo {remote}/magisk_module {remote}/bot {remote}/screenshots {remote}/logs",
+            f" {remote}/infra/mihomo {remote}/magisk_module {remote}/bot {remote}/core {remote}/config {remote}/screenshots {remote}/logs",
             sudo=True,
         )
         if self.config.vps_user != "root":
@@ -681,6 +681,23 @@ class MasterDeployer:
                 exclude={"__pycache__", ".pyc", "screenshots"},
             )
             UI.ok(f"Uploaded {bot_count} bot files")
+
+        # ── Upload core code (for worker-api Docker build) ──
+        core_dir = str(self.project_root / "core")
+        if os.path.isdir(core_dir):
+            core_count = self.conn.upload_dir(
+                core_dir, f"{remote}/core",
+                exclude={"__pycache__", ".pyc"},
+            )
+            UI.ok(f"Uploaded {core_count} core files")
+
+        # ── Upload config directory (for worker-api Docker build) ──
+        config_dir = str(self.project_root / "config")
+        if os.path.isdir(config_dir):
+            config_count = self.conn.upload_dir(
+                config_dir, f"{remote}/config",
+            )
+            UI.ok(f"Uploaded {config_count} config files")
 
         # ── Setup and Upload Mihomo Config ──
         UI.step("Setting up Mihomo config...")
