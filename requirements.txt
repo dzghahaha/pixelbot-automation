@@ -13,3 +13,7 @@ pymongo>=4.6.0
 
 # TOTP 2FA code generation
 pyotp>=2.9.0
+
+# YAML configuration parsing (for Mihomo config mixing)
+pyyaml>=6.0
+

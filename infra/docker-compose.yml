@@ -1,37 +1,13 @@
-# Gemini Pixel Offer Claim Bot — Production Stack
-# 
-# Network model (ReDroid routed through Gluetun VPN container):
-#   ┌────────────────────────────────────────────────────────┐
-#   │  VPS Host                                              │
-#   │                                                        │
-#   │  ┌───────────────┐                                     │
-#   │  │    gluetun    │◄────── WireGuard VPN Tunnel         │
-#   │  │  VPN Gateway  │                                     │
-#   │  └───────┬───────┘                                     │
-#   │          │ (Shares Network Namespace)                  │
-#   │  ┌───────▼───────┐                                     │
-#   │  │    ReDroid    │  All traffic secure & encrypted,    │
-#   │  │   Android 13  │  Proton secure DNS (10.2.0.1) active│
-#   │  └───────────────┘                                     │
-#   │                                                        │
-#   │  ┌───────────────┐  Shares Gluetun network namespace   │
-#   │  │  worker-api   │  ADB → 127.0.0.1:5555               │
-#   │  │  :8800 API    │  (Port mapped from Gluetun)         │
-#   │  └───────────────┘                                     │
-#   └────────────────────────────────────────────────────────┘
-#
-# Prerequisite: Place a standard paid Proton VPN WireGuard profile at
-# infra/wireguard/proton.conf. The file should be the unmodified ProtonVPN
-# WireGuard .conf with [Interface] and [Peer] sections.
+# Gemini Pixel Offer Claim Bot — Production Stack (Mihomo/Clash TUN Mode)
 
 volumes:
   redroid-data:
 
 services:
-  # ── Gluetun VPN Gatekeeper ────────────────────────────────────
-  gluetun:
-    image: qmcgaw/gluetun:v3
-    container_name: gluetun
+  # ── Mihomo Proxy Gatekeeper ───────────────────────────────────
+  mihomo:
+    image: metacubex/mihomo:latest
+    container_name: mihomo
     cap_add:
       - NET_ADMIN
     devices:
@@ -39,22 +15,9 @@ services:
     ports:
       - "127.0.0.1:5555:5555"       # ADB port exposed safely on host loopback
       - "127.0.0.1:8800:8800"       # Worker API exposed safely on host loopback
-    dns:
-      - 10.2.0.1
+      - "127.0.0.1:9090:9090"       # External controller (optional)
     volumes:
-      - ./wireguard/proton.conf:/gluetun/wireguard/wg0.conf:ro  # ProtonVPN WireGuard profile
-    environment:
-      - VPN_SERVICE_PROVIDER=custom
-      - VPN_TYPE=wireguard
-      - DNS_ADDRESS=10.2.0.1          # Force shared namespace DNS to Proton Secure DNS
-      - DNS_SERVER=off                # Do not start Gluetun's default DNS forwarder
-      - FIREWALL=on                  # Kill switch enabled to prevent network leaks
-      - DNS_KEEP_NAMESERVER=off      # Do not inherit host resolvers
-      - HEALTH_RESTART_VPN=off
-      - HEALTH_TARGET_ADDRESS=10.2.0.1:53
-      - HEALTH_ICMP_TARGET_IPS=10.2.0.1
-      - PUBLICIP_ENABLED=off
-      - VERSION_INFORMATION=off
+      - ./mihomo:/root/.config/mihomo
     restart: always
 
   # ── ReDroid — Headless Android 13 (Pixel 10 Pro XL / franklin) ──────────
@@ -62,9 +25,9 @@ services:
     image: redroid/redroid:13.0.0-latest
     container_name: pixel10-android
     privileged: true
-    network_mode: "container:gluetun"  # Shares network namespace with Gluetun
+    network_mode: "container:mihomo"  # Shares network namespace with Mihomo
     depends_on:
-      gluetun:
+      mihomo:
         condition: service_started
     cpus: "6.0"
     mem_limit: 4g
@@ -154,10 +117,10 @@ services:
       - ro.hardware=redfin
       - ro.boot.hardware=redfin
 
-      # ── DNS — Proton Secure DNS (routed via Gluetun) ──
+      # ── DNS — Routed via Mihomo TUN (we can specify any public DNS here) ──
       - androidboot.redroid_net_ndns=2
-      - androidboot.redroid_net_dns1=10.2.0.1
-      - androidboot.redroid_net_dns2=10.2.0.1
+      - androidboot.redroid_net_dns1=8.8.8.8
+      - androidboot.redroid_net_dns2=8.8.4.4
     logging:
       driver: json-file
       options:
@@ -178,9 +141,9 @@ services:
       context: ..
       dockerfile: infra/Dockerfile
     container_name: pixel10-worker
-    network_mode: "container:gluetun"
+    network_mode: "container:mihomo"
     depends_on:
-      gluetun:
+      mihomo:
         condition: service_started
       redroid:
         condition: service_healthy

@@ -672,6 +672,49 @@ class MasterDeployer:
             )
             UI.ok(f"Uploaded {bot_count} bot files")
 
+        # ── Setup and Upload Mihomo Config ──
+        UI.step("Setting up Mihomo config...")
+        self.conn.exec(f"mkdir -p {remote}/infra/mihomo", sudo=True)
+        mihomo_local_dir = self.project_root / "infra" / "mihomo"
+        mihomo_local_dir.mkdir(parents=True, exist_ok=True)
+        config_path = mihomo_local_dir / "config.yaml"
+
+        sub_url = "https://dash.yfjc.xyz/api/v1/client/subscribe?token=732e1ba06909a7ce7e43eb4de3da5236"
+        try:
+            import urllib.request
+            import yaml
+            req = urllib.request.Request(sub_url, headers={"User-Agent": "Clash.Meta"})
+            with urllib.request.urlopen(req, timeout=15) as response:
+                content = response.read().decode("utf-8")
+
+            data = yaml.safe_load(content)
+            if not isinstance(data, dict):
+                data = {}
+
+            # Inject / Override TUN configuration
+            data["tun"] = {
+                "enable": True,
+                "stack": "gvisor",
+                "auto-route": True,
+                "auto-detect-interface": True,
+                "dns-hijack": ["any:53", "tcp:any:53"]
+            }
+            if "dns" not in data or not isinstance(data["dns"], dict):
+                data["dns"] = {}
+            data["dns"]["enable"] = True
+            data["dns"]["listen"] = "0.0.0.0:53"
+            data["dns"]["enhanced-mode"] = "fake-ip"
+            data["dns"]["nameserver"] = ["8.8.8.8", "1.1.1.1"]
+
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.safe_dump(data, f, allow_unicode=True)
+
+            UI.ok("Mihomo config.yaml generated locally")
+            self.conn.upload_file(str(config_path), f"{remote}/infra/mihomo/config.yaml")
+            UI.ok("Mihomo config.yaml uploaded to VPS")
+        except Exception as exc:
+            UI.error(f"Failed to fetch or generate Mihomo config: {exc}")
+
         # ── Generate .env file ──
         UI.step("Generating .env file...")
         image_name = self.redroid_image or "CHANGE_ME"
