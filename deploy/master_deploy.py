@@ -723,7 +723,7 @@ class MasterDeployer:
                 "stack": "gvisor",
                 "auto-route": True,
                 "auto-detect-interface": True,
-                "dns-hijack": ["any:53", "tcp:any:53"]
+                "dns-hijack": ["any:53"]
             }
             if "dns" not in data or not isinstance(data["dns"], dict):
                 data["dns"] = {}
