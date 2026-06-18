@@ -399,7 +399,10 @@ class MasterDeployer:
         self.conn = VPSConnection(config)
         self.project_root = Path(__file__).parent.parent.resolve()  # deploy/ → project root
         self.infra_dir = self.project_root / "infra"
-        self.remote_dir = config.remote_project_dir
+        if config.remote_project_dir == "/root/pixel10-bot-automation" and config.vps_user != "root":
+            self.remote_dir = f"/home/{config.vps_user}/pixel10-bot-automation"
+        else:
+            self.remote_dir = config.remote_project_dir
         self.redroid_image = ""  # Set during build phase
 
     def run(self) -> None:
