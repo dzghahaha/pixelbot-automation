@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+# Use domestic mirror to speed up apt downloads in China
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list || true
+
 # Install ADB, curl, bash, and sqlite3
 # bash is needed for core/build_props.sh (called by automation.py)
 # sqlite3 is needed for GSF ID extraction
