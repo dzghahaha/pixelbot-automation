@@ -1,0 +1,30 @@
+{
+    "MANUFACTURER": "Google",
+    "MODEL": "Pixel 5",
+    "FINGERPRINT": "google/redfin/redfin:14/AP2A.240805.005/12025142:user/release-keys",
+    "BRAND": "google",
+    "PRODUCT": "redfin",
+    "DEVICE": "redfin",
+    "RELEASE": "14",
+    "ID": "AP2A.240805.005",
+    "INCREMENTAL": "12025142",
+    "TYPE": "user",
+    "TAGS": "release-keys",
+    "SECURITY_PATCH": "2024-08-05",
+    "DEVICE_INITIAL_SDK_INT": "30",
+
+    "BOARD": "redfin",
+    "HARDWARE": "redfin",
+    "SOC_MANUFACTURER": "Qualcomm",
+    "SOC_MODEL": "SM7250",
+
+    "FIRST_API_LEVEL": 30,
+    "BUILD_ID": "AP2A.240805.005",
+
+    "spoofBuild": true,
+    "spoofProps": true,
+    "spoofProvider": true,
+    "spoofSignature": true,
+
+    "verboseLogs": false
+}

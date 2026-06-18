@@ -1,0 +1,203 @@
+# Gemini Pixel Offer Claim Bot — Production Stack
+# 
+# Network model (ReDroid routed through Gluetun VPN container):
+#   ┌────────────────────────────────────────────────────────┐
+#   │  VPS Host                                              │
+#   │                                                        │
+#   │  ┌───────────────┐                                     │
+#   │  │    gluetun    │◄────── WireGuard VPN Tunnel         │
+#   │  │  VPN Gateway  │                                     │
+#   │  └───────┬───────┘                                     │
+#   │          │ (Shares Network Namespace)                  │
+#   │  ┌───────▼───────┐                                     │
+#   │  │    ReDroid    │  All traffic secure & encrypted,    │
+#   │  │   Android 13  │  Proton secure DNS (10.2.0.1) active│
+#   │  └───────────────┘                                     │
+#   │                                                        │
+#   │  ┌───────────────┐  Shares Gluetun network namespace   │
+#   │  │  worker-api   │  ADB → 127.0.0.1:5555               │
+#   │  │  :8800 API    │  (Port mapped from Gluetun)         │
+#   │  └───────────────┘                                     │
+#   └────────────────────────────────────────────────────────┘
+#
+# Prerequisite: Place a standard paid Proton VPN WireGuard profile at
+# infra/wireguard/proton.conf. The file should be the unmodified ProtonVPN
+# WireGuard .conf with [Interface] and [Peer] sections.
+
+volumes:
+  redroid-data:
+
+services:
+  # ── Gluetun VPN Gatekeeper ────────────────────────────────────
+  gluetun:
+    image: qmcgaw/gluetun:v3
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "127.0.0.1:5555:5555"       # ADB port exposed safely on host loopback
+      - "127.0.0.1:8800:8800"       # Worker API exposed safely on host loopback
+    dns:
+      - 10.2.0.1
+    volumes:
+      - ./wireguard/proton.conf:/gluetun/wireguard/wg0.conf:ro  # ProtonVPN WireGuard profile
+    environment:
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - DNS_ADDRESS=10.2.0.1          # Force shared namespace DNS to Proton Secure DNS
+      - DNS_SERVER=off                # Do not start Gluetun's default DNS forwarder
+      - FIREWALL=on                  # Kill switch enabled to prevent network leaks
+      - DNS_KEEP_NAMESERVER=off      # Do not inherit host resolvers
+      - HEALTH_RESTART_VPN=off
+      - HEALTH_TARGET_ADDRESS=10.2.0.1:53
+      - HEALTH_ICMP_TARGET_IPS=10.2.0.1
+      - PUBLICIP_ENABLED=off
+      - VERSION_INFORMATION=off
+    restart: always
+
+  # ── ReDroid — Headless Android 13 (Pixel 10 Pro XL / franklin) ──────────
+  redroid:
+    image: redroid/redroid:13.0.0-latest
+    container_name: pixel10-android
+    privileged: true
+    network_mode: "container:gluetun"  # Shares network namespace with Gluetun
+    depends_on:
+      gluetun:
+        condition: service_started
+    cpus: "6.0"
+    mem_limit: 4g
+    memswap_limit: 4g
+    deploy:
+      resources:
+        limits:
+          cpus: "6.0"
+          memory: 4G
+    volumes:
+      - redroid-data:/data
+      - /dev/binderfs:/dev/binderfs
+    command:
+      # ── Display ──
+      - androidboot.redroid_width=1080
+      - androidboot.redroid_height=1920
+      - androidboot.redroid_dpi=420
+      - androidboot.redroid_fps=60
+
+      # ── Rendering ──
+      - androidboot.redroid_gpu_mode=guest
+      - ro.hardware.egl=angle
+
+      # ── Locale ──
+      - persist.sys.timezone=America/New_York
+      - persist.sys.language=en
+      - persist.sys.country=US
+      - ro.product.locale=en-US
+
+      # ── Pixel 10 Pro XL (franklin) — Device Identity ──
+      - ro.product.brand=google
+      - ro.product.manufacturer=Google
+      - ro.product.model=Pixel_10_Pro_XL
+      - ro.product.name=franklin
+      - ro.product.device=franklin
+      - ro.product.board=franklin
+
+      # System partition
+      - ro.product.system.brand=google
+      - ro.product.system.manufacturer=Google
+      - ro.product.system.model=Pixel_10_Pro_XL
+      - ro.product.system.name=franklin
+      - ro.product.system.device=franklin
+
+      # Vendor partition
+      - ro.product.vendor.brand=google
+      - ro.product.vendor.manufacturer=Google
+      - ro.product.vendor.model=Pixel_10_Pro_XL
+      - ro.product.vendor.name=franklin
+      - ro.product.vendor.device=franklin
+
+      # Product partition
+      - ro.product.product.brand=google
+      - ro.product.product.manufacturer=Google
+      - ro.product.product.model=Pixel_10_Pro_XL
+      - ro.product.product.name=franklin
+      - ro.product.product.device=franklin
+
+      # ── Build / Fingerprint (SDK 36 Alignment for Android 13 base) ──
+      - ro.build.id=RQ3A.210805.001.A1
+      - ro.build.display.id=RQ3A.210805.001.A1
+      - ro.build.flavor=redfin-user
+      - ro.build.type=user
+      - ro.build.tags=release-keys
+      - ro.build.version.sdk=36
+      - ro.build.version.codename=REL
+
+      # ── Google Service Identity ──
+      - ro.com.google.clientidbase=android-google
+      - ro.opa.eligible_device=true
+
+      # ── Anti-Emulator Detection ──
+      - ro.kernel.qemu=0
+      - ro.kernel.qemu.gles=0
+      - ro.boot.verifiedbootstate=green
+      - ro.boot.flash.locked=1
+      - ro.boot.vbmeta.device_state=locked
+
+      # ── Security / ADB ──
+      - ro.secure=0
+      - ro.adb.secure=0
+      - ro.debuggable=1
+
+      # ── Hardware / SoC (Snapdragon 765G — Compatible HALs) ──
+      - ro.board.platform=lito
+      - ro.boot.hardware.sku=redfin
+      - ro.hardware=redfin
+      - ro.boot.hardware=redfin
+
+      # ── DNS — Proton Secure DNS (routed via Gluetun) ──
+      - androidboot.redroid_net_ndns=2
+      - androidboot.redroid_net_dns1=10.2.0.1
+      - androidboot.redroid_net_dns2=10.2.0.1
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "getprop sys.boot_completed | grep -q 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+
+  # ── Worker API — Python automation backend ─────────────────────
+  worker-api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    container_name: pixel10-worker
+    network_mode: "container:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_started
+      redroid:
+        condition: service_healthy
+    env_file:
+      - ../api.env
+    environment:
+      - ADB_HOST=127.0.0.1
+      - ADB_PORT=5555
+      - ADB_CONNECT_TIMEOUT_SEC=180
+      - WORKER_API_BIND=0.0.0.0
+    volumes:
+      - ../data:/app/data
+      - ../screenshots:/app/screenshots
+      - ../logs:/app/logs
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
