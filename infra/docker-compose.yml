@@ -49,7 +49,7 @@ services:
 
       # ── Rendering ──
       - androidboot.redroid_gpu_mode=guest
-      - ro.hardware.egl=emulation
+      - ro.hardware.egl=swiftshader
 
       # ── Locale ──
       - persist.sys.timezone=America/New_York
